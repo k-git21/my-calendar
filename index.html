@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>マイカレンダー</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="カレンダー">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+  :root {
+    --bg: #f7f7f5; --surface: #ffffff; --text: #1f2328; --muted: #6b7280;
+    --line: #e5e7eb; --accent: #2563eb; --today: #2563eb; --sun: #dc2626; --sat: #2563eb;
+    --hover: #f1f5f9; --shadow: 0 10px 30px rgba(0,0,0,.15);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111315; --surface: #1b1e22; --text: #e6e6e6; --muted: #9aa0a6;
+      --line: #2c3036; --accent: #60a5fa; --today: #60a5fa; --sun: #f87171; --sat: #60a5fa;
+      --hover: #24282e; --shadow: 0 10px 30px rgba(0,0,0,.5);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    font-size: 14px;
+  }
+  .app {
+    max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; min-height: 100%;
+    padding: calc(12px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right))
+             calc(24px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+  }
+  body { -webkit-tap-highlight-color: transparent; }
+  @media (max-width: 560px) {
+    header h1 { font-size: 18px; min-width: 0; flex: 1 0 100%; margin: 0; }
+    header button { padding: 8px 12px; }
+    #export, #import { font-size: 12px; padding: 8px; }
+  }
+  header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  header h1 { font-size: 20px; margin: 0 8px 0 0; font-weight: 700; min-width: 8em; }
+  button {
+    font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 12px; cursor: pointer;
+  }
+  button:hover { background: var(--hover); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.danger { color: var(--sun); }
+  .spacer { flex: 1; }
+  .main { display: grid; grid-template-columns: 1fr 300px; gap: 12px; flex: 1; }
+  @media (max-width: 800px) { .main { grid-template-columns: 1fr; } }
+
+  .cal { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+  .dow, .grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .dow div { padding: 6px; text-align: center; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); }
+  .dow div:first-child { color: var(--sun); } .dow div:last-child { color: var(--sat); }
+  .grid { flex: 1; grid-auto-rows: minmax(92px, 1fr); }
+  .cell { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 4px; cursor: pointer; overflow: hidden; min-width: 0; }
+  .cell:nth-child(7n) { border-right: none; }
+  .cell:hover { background: var(--hover); }
+  .cell.other { opacity: .4; }
+  .cell.selected { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .num { font-size: 12px; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
+  .cell.sun .num { color: var(--sun); } .cell.sat .num { color: var(--sat); }
+  .cell.today .num { background: var(--today); color: #fff; font-weight: 700; }
+  .chip { font-size: 11px; line-height: 1.5; padding: 0 4px; border-radius: 4px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
+  .more { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  @media (max-width: 560px) {
+    .grid { grid-auto-rows: minmax(60px, 1fr); }
+    .chip { font-size: 0; height: 6px; padding: 0; }
+    .more { font-size: 10px; }
+  }
+
+  aside { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  aside h2 { font-size: 15px; margin: 0; }
+  .list { display: flex; flex-direction: column; gap: 6px; }
+  .item { display: flex; gap: 8px; padding: 8px; border-radius: 8px; border: 1px solid var(--line); cursor: pointer; }
+  .item:hover { background: var(--hover); }
+  .bar { width: 4px; border-radius: 2px; flex: none; }
+  .item .t { font-weight: 600; word-break: break-word; }
+  .item .s { font-size: 12px; color: var(--muted); white-space: pre-wrap; word-break: break-word; }
+  .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+
+  dialog { border: none; border-radius: 14px; padding: 0; background: var(--surface); color: var(--text); box-shadow: var(--shadow); width: min(420px, calc(100vw - 32px)); }
+  dialog::backdrop { background: rgba(0,0,0,.35); }
+  form { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  form h3 { margin: 0 0 4px; font-size: 16px; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+  input, textarea, select {
+    font: inherit; font-size: 15px; color: var(--text); background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px; width: 100%;
+  }
+  textarea { min-height: 64px; resize: vertical; }
+  .row { display: flex; gap: 8px; } .row > * { flex: 1; }
+  .check { flex-direction: row; align-items: center; gap: 6px; color: var(--text); font-size: 14px; }
+  .check input { width: auto; }
+  .colors { display: flex; gap: 8px; flex-wrap: wrap; }
+  .colors input { display: none; }
+  .colors span { display: block; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; }
+  .colors input:checked + span { border-color: var(--text); }
+  .actions { display: flex; gap: 8px; margin-top: 4px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1 id="title"></h1>
+    <button id="prev" aria-label="前の月">‹</button>
+    <button id="today">今日</button>
+    <button id="next" aria-label="次の月">›</button>
+    <span class="spacer"></span>
+    <button id="export" title="予定をファイルに保存">書き出し</button>
+    <button id="import" title="保存したファイルから読み込み">読み込み</button>
+    <input id="importFile" type="file" accept="application/json,.json" class="hidden">
+    <button id="add" class="primary">＋ 予定</button>
+  </header>
+
+  <div class="main">
+    <section class="cal">
+      <div class="dow"><div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div></div>
+      <div class="grid" id="grid"></div>
+    </section>
+    <aside>
+      <h2 id="dayTitle"></h2>
+      <div class="list" id="dayList"></div>
+      <button id="addDay">＋ この日に予定を追加</button>
+    </aside>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <form id="form" method="dialog">
+    <h3 id="formTitle">予定を追加</h3>
+    <label>タイトル<input name="title" required maxlength="100"></label>
+    <label>日付<input name="date" type="date" required></label>
+    <label class="check"><input name="allDay" type="checkbox"> 終日</label>
+    <div class="row" id="timeRow">
+      <label>開始<input name="start" type="time"></label>
+      <label>終了<input name="end" type="time"></label>
+    </div>
+    <label>メモ<textarea name="memo"></textarea></label>
+    <div class="colors" id="colors"></div>
+    <div class="actions">
+      <button type="button" id="del" class="danger">削除</button>
+      <span class="spacer"></span>
+      <button type="button" id="cancel">キャンセル</button>
+      <button type="submit" class="primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const KEY = 'my-calendar-events-v1';
+const COLORS = ['#2563eb', '#16a34a', '#dc2626', '#d97706', '#9333ea', '#db2777', '#0891b2', '#64748b'];
+
+let events = load();
+let view = new Date(); view.setDate(1);
+let selected = ymd(new Date());
+let editingId = null;
+
+const $ = id => document.getElementById(id);
+const form = $('form');
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; }
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(events)); }
+  catch { alert('保存できませんでした。「書き出し」でバックアップしてください。'); }
+}
+function ymd(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function sortKey(e) { return e.allDay ? '' : (e.start || '99:99'); }
+function eventsOn(date) {
+  return events.filter(e => e.date === date).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+}
+function timeLabel(e) {
+  if (e.allDay) return '終日';
+  if (e.start && e.end) return `${e.start}–${e.end}`;
+  return e.start || '';
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function render() {
+  const y = view.getFullYear(), m = view.getMonth();
+  $('title').textContent = `${y}年${m + 1}月`;
+  const first = new Date(y, m, 1);
+  const startDay = new Date(y, m, 1 - first.getDay());
+  const weeks = Math.ceil((first.getDay() + new Date(y, m + 1, 0).getDate()) / 7);
+  const todayStr = ymd(new Date());
+
+  const grid = $('grid');
+  grid.innerHTML = '';
+  for (let i = 0; i < weeks * 7; i++) {
+    const d = new Date(startDay); d.setDate(startDay.getDate() + i);
+    const ds = ymd(d);
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    if (d.getMonth() !== m) cell.classList.add('other');
+    if (d.getDay() === 0) cell.classList.add('sun');
+    if (d.getDay() === 6) cell.classList.add('sat');
+    if (ds === todayStr) cell.classList.add('today');
+    if (ds === selected) cell.classList.add('selected');
+
+    const list = eventsOn(ds);
+    const shown = list.slice(0, 3);
+    cell.innerHTML = `<span class="num">${d.getDate()}</span>` +
+      shown.map(e => `<div class="chip" style="background:${e.color}">${e.allDay ? '' : esc(e.start || '') + ' '}${esc(e.title)}</div>`).join('') +
+      (list.length > 3 ? `<div class="more">他${list.length - 3}件</div>` : '');
+    cell.onclick = () => { selected = ds; render(); };
+    cell.ondblclick = () => openForm(null, ds);
+    grid.appendChild(cell);
+  }
+  renderDay();
+}
+
+function renderDay() {
+  const d = new Date(selected + 'T00:00');
+  const w = '日月火水木金土'[d.getDay()];
+  $('dayTitle').textContent = `${d.getMonth() + 1}月${d.getDate()}日（${w}）`;
+  const list = eventsOn(selected);
+  $('dayList').innerHTML = list.length ? '' : '<div class="empty">予定はありません</div>';
+  for (const e of list) {
+    const el = document.createElement('div');
+    el.className = 'item';
+    el.innerHTML = `<div class="bar" style="background:${e.color}"></div>
+      <div><div class="t">${esc(e.title)}</div><div class="s">${esc(timeLabel(e))}${e.memo ? '\n' + esc(e.memo) : ''}</div></div>`;
+    el.onclick = () => openForm(e.id);
+    $('dayList').appendChild(el);
+  }
+}
+
+$('colors').innerHTML = COLORS.map((c, i) =>
+  `<label><input type="radio" name="color" value="${c}"${i === 0 ? ' checked' : ''}><span style="background:${c}"></span></label>`).join('');
+
+function syncTime() { $('timeRow').classList.toggle('hidden', form.allDay.checked); }
+form.allDay.onchange = syncTime;
+
+function openForm(id, date) {
+  editingId = id;
+  const e = id ? events.find(x => x.id === id) : null;
+  $('formTitle').textContent = e ? '予定を編集' : '予定を追加';
+  $('del').classList.toggle('hidden', !e);
+  form.title.value = e ? e.title : '';
+  form.date.value = e ? e.date : (date || selected);
+  form.allDay.checked = e ? e.allDay : false;
+  form.start.value = e ? (e.start || '') : '';
+  form.end.value = e ? (e.end || '') : '';
+  form.memo.value = e ? (e.memo || '') : '';
+  form.color.value = e ? e.color : COLORS[0];
+  syncTime();
+  $('dlg').showModal();
+  form.title.focus();
+}
+
+form.onsubmit = ev => {
+  ev.preventDefault();
+  const data = {
+    title: form.title.value.trim(),
+    date: form.date.value,
+    allDay: form.allDay.checked,
+    start: form.allDay.checked ? '' : form.start.value,
+    end: form.allDay.checked ? '' : form.end.value,
+    memo: form.memo.value.trim(),
+    color: form.color.value,
+  };
+  if (!data.title || !data.date) return;
+  if (editingId) Object.assign(events.find(x => x.id === editingId), data);
+  else events.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ...data });
+  save();
+  selected = data.date;
+  const d = new Date(data.date + 'T00:00'); view = new Date(d.getFullYear(), d.getMonth(), 1);
+  $('dlg').close();
+  render();
+};
+$('del').onclick = () => {
+  if (!confirm('この予定を削除しますか？')) return;
+  events = events.filter(x => x.id !== editingId);
+  save(); $('dlg').close(); render();
+};
+$('cancel').onclick = () => $('dlg').close();
+
+$('prev').onclick = () => { view.setMonth(view.getMonth() - 1); render(); };
+$('next').onclick = () => { view.setMonth(view.getMonth() + 1); render(); };
+$('today').onclick = () => { const t = new Date(); view = new Date(t.getFullYear(), t.getMonth(), 1); selected = ymd(t); render(); };
+$('add').onclick = () => openForm(null);
+$('addDay').onclick = () => openForm(null, selected);
+
+$('export').onclick = () => {
+  const blob = new Blob([JSON.stringify(events, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `calendar-backup-${ymd(new Date())}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+$('import').onclick = () => $('importFile').click();
+$('importFile').onchange = async () => {
+  const file = $('importFile').files[0];
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!Array.isArray(data)) throw new Error();
+    if (!confirm(`${data.length}件の予定を読み込みます。今の予定は置き換えられます。よろしいですか？`)) return;
+    events = data; save(); render();
+  } catch { alert('読み込めないファイルです'); }
+  $('importFile').value = '';
+};
+
+document.addEventListener('keydown', e => {
+  if ($('dlg').open || e.target.matches('input, textarea')) return;
+  if (e.key === 'ArrowLeft') $('prev').click();
+  if (e.key === 'ArrowRight') $('next').click();
+  if (e.key === 'n') $('add').click();
+});
+
+render();
+
+// オフライン対応（https か localhost で開いたときだけ有効）
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+// ブラウザが予定データを勝手に消さないよう頼んでおく
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+</script>
+</body>
+</html>
