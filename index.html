@@ -42,6 +42,7 @@
     header h1 { font-size: 18px; min-width: 0; flex: 1 0 100%; margin: 0; }
     header button { padding: 8px 12px; }
     #export, #import { font-size: 12px; padding: 8px; }
+    #q { flex: 1 0 100%; order: 10; }
   }
   header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   header h1 { font-size: 20px; margin: 0 8px 0 0; font-weight: 700; min-width: 8em; }
@@ -53,6 +54,12 @@
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   button.danger { color: var(--sun); }
   .spacer { flex: 1; }
+  .seg { display: flex; }
+  .seg button { border-radius: 0; margin-left: -1px; }
+  .seg button:first-child { border-radius: 8px 0 0 8px; margin-left: 0; }
+  .seg button:last-child { border-radius: 0 8px 8px 0; }
+  .seg button.on { background: var(--accent); border-color: var(--accent); color: #fff; position: relative; }
+  #q { width: 150px; padding: 6px 10px; font-size: 14px; }
   .main { display: grid; grid-template-columns: 1fr 300px; gap: 12px; flex: 1; }
   @media (max-width: 800px) { .main { grid-template-columns: 1fr; } }
 
@@ -61,23 +68,37 @@
   .dow div { padding: 6px; text-align: center; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); }
   .dow div:first-child { color: var(--sun); } .dow div:last-child { color: var(--sat); }
   .grid { flex: 1; grid-auto-rows: minmax(92px, 1fr); }
+  .grid.week { grid-auto-rows: minmax(320px, 1fr); }
+  .grid.day { grid-template-columns: 1fr; grid-auto-rows: minmax(320px, 1fr); }
   .cell { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 4px; cursor: pointer; overflow: hidden; min-width: 0; }
   .cell:nth-child(7n) { border-right: none; }
+  .grid.day .cell { border-right: none; }
   .cell:hover { background: var(--hover); }
   .cell.other { opacity: .4; }
   .cell.selected { outline: 2px solid var(--accent); outline-offset: -2px; }
   .num { font-size: 12px; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
-  .cell.sun .num { color: var(--sun); } .cell.sat .num { color: var(--sat); }
+  .cell.sun .num, .cell.holiday .num { color: var(--sun); } .cell.sat .num { color: var(--sat); }
   .cell.today .num { background: var(--today); color: #fff; font-weight: 700; }
+  .hol { font-size: 10px; color: var(--sun); margin-left: 2px; white-space: nowrap; }
+  .wd { font-size: 11px; color: var(--muted); margin-left: 2px; }
   .chip { font-size: 11px; line-height: 1.5; padding: 0 4px; border-radius: 4px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
+  .grid.week .chip { white-space: normal; padding: 2px 4px; }
   .more { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .drow { display: flex; gap: 10px; padding: 8px; margin-top: 6px; border: 1px solid var(--line); border-radius: 8px; }
+  .drow .tm { color: var(--muted); font-size: 12px; min-width: 5.5em; }
+  .drow .tt { font-weight: 600; word-break: break-word; }
+  .drow .mm { font-size: 12px; color: var(--muted); white-space: pre-wrap; word-break: break-word; }
   @media (max-width: 560px) {
-    .grid { grid-auto-rows: minmax(60px, 1fr); }
-    .chip { font-size: 0; height: 6px; padding: 0; }
+    .grid.month { grid-auto-rows: minmax(60px, 1fr); }
+    .grid.month .chip { font-size: 0; height: 6px; padding: 0; }
+    .grid.month .hol { display: none; }
     .more { font-size: 10px; }
+    body[data-mode="week"] .dow { display: none; }
+    .grid.week { grid-template-columns: 1fr; grid-auto-rows: auto; }
+    .grid.week .cell { border-right: none; min-height: 56px; }
   }
 
-  aside { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  aside { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; align-self: start; }
   aside h2 { font-size: 15px; margin: 0; }
   .list { display: flex; flex-direction: column; gap: 6px; }
   .item { display: flex; gap: 8px; padding: 8px; border-radius: 8px; border: 1px solid var(--line); cursor: pointer; }
@@ -86,6 +107,7 @@
   .item .t { font-weight: 600; word-break: break-word; }
   .item .s { font-size: 12px; color: var(--muted); white-space: pre-wrap; word-break: break-word; }
   .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+  .holtag { color: var(--sun); font-size: 13px; }
 
   dialog { border: none; border-radius: 14px; padding: 0; background: var(--surface); color: var(--text); box-shadow: var(--shadow); width: min(420px, calc(100vw - 32px)); }
   dialog::backdrop { background: rgba(0,0,0,.35); }
@@ -105,17 +127,27 @@
   .colors span { display: block; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; }
   .colors input:checked + span { border-color: var(--text); }
   .actions { display: flex; gap: 8px; margin-top: 4px; }
+  .hint { font-size: 11px; color: var(--muted); line-height: 1.5; }
   .hidden { display: none !important; }
+
+  .toasts { position: fixed; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); z-index: 1000;
+            display: flex; flex-direction: column; gap: 8px; width: min(420px, calc(100vw - 24px)); }
+  .toast { background: var(--text); color: var(--bg); padding: 10px 14px; border-radius: 10px; box-shadow: var(--shadow); white-space: pre-wrap; cursor: pointer; }
 </style>
 </head>
 <body>
+<div class="toasts" id="toasts"></div>
 <div class="app">
   <header>
     <h1 id="title"></h1>
-    <button id="prev" aria-label="前の月">‹</button>
+    <button id="prev" aria-label="前へ">‹</button>
     <button id="today">今日</button>
-    <button id="next" aria-label="次の月">›</button>
+    <button id="next" aria-label="次へ">›</button>
+    <div class="seg" id="seg">
+      <button data-v="month">月</button><button data-v="week">週</button><button data-v="day">日</button>
+    </div>
     <span class="spacer"></span>
+    <input id="q" type="search" placeholder="予定を検索" aria-label="予定を検索">
     <button id="export" title="予定をファイルに保存">書き出し</button>
     <button id="import" title="保存したファイルから読み込み">読み込み</button>
     <input id="importFile" type="file" accept="application/json,.json" class="hidden">
@@ -124,7 +156,7 @@
 
   <div class="main">
     <section class="cal">
-      <div class="dow"><div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div></div>
+      <div class="dow" id="dow"><div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div></div>
       <div class="grid" id="grid"></div>
     </section>
     <aside>
@@ -145,8 +177,26 @@
       <label>開始<input name="start" type="time"></label>
       <label>終了<input name="end" type="time"></label>
     </div>
+    <div class="row">
+      <label>くり返し
+        <select name="repeat">
+          <option value="none">なし</option><option value="daily">毎日</option>
+          <option value="weekly">毎週</option><option value="monthly">毎月</option><option value="yearly">毎年</option>
+        </select>
+      </label>
+      <label id="untilWrap">いつまで（空欄で無期限）<input name="until" type="date"></label>
+    </div>
+    <label>通知
+      <select name="remind">
+        <option value="">なし</option><option value="0">開始時刻</option><option value="5">5分前</option>
+        <option value="10">10分前</option><option value="30">30分前</option><option value="60">1時間前</option>
+        <option value="1440">1日前</option>
+      </select>
+    </label>
+    <div class="hint" id="remindHint"></div>
     <label>メモ<textarea name="memo"></textarea></label>
     <div class="colors" id="colors"></div>
+    <div class="hint hidden" id="repeatHint">くり返し予定を編集・削除すると、すべての回に反映されます。</div>
     <div class="actions">
       <button type="button" id="del" class="danger">削除</button>
       <span class="spacer"></span>
@@ -158,9 +208,14 @@
 
 <script>
 const KEY = 'my-calendar-events-v1';
+const FIRED_KEY = 'my-calendar-fired-v1';
+const MODE_KEY = 'my-calendar-mode-v1';
 const COLORS = ['#2563eb', '#16a34a', '#dc2626', '#d97706', '#9333ea', '#db2777', '#0891b2', '#64748b'];
+const WD = '日月火水木金土';
+const REPEAT_LABEL = { daily: '毎日', weekly: '毎週', monthly: '毎月', yearly: '毎年' };
 
 let events = load();
+let mode = ['month', 'week', 'day'].includes(localStorage.getItem(MODE_KEY)) ? localStorage.getItem(MODE_KEY) : 'month';
 let view = new Date(); view.setDate(1);
 let selected = ymd(new Date());
 let editingId = null;
@@ -175,49 +230,161 @@ function save() {
   try { localStorage.setItem(KEY, JSON.stringify(events)); }
   catch { alert('保存できませんでした。「書き出し」でバックアップしてください。'); }
 }
-function ymd(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
+function pad(n) { return String(n).padStart(2, '0'); }
+function ymd(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function parseDate(s) { return new Date(s + 'T00:00'); }
+function dayDiff(a, b) { return Math.round((parseDate(b) - parseDate(a)) / 864e5); }
 function sortKey(e) { return e.allDay ? '' : (e.start || '99:99'); }
-function eventsOn(date) {
-  return events.filter(e => e.date === date).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 function timeLabel(e) {
   if (e.allDay) return '終日';
   if (e.start && e.end) return `${e.start}–${e.end}`;
   return e.start || '';
 }
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ---------- 祝日（計算で求める。通信不要） ---------- */
+const holCache = {};
+function holidaysOf(y) {
+  if (holCache[y]) return holCache[y];
+  const h = {};
+  const put = (m, d, name) => { h[`${y}-${pad(m)}-${pad(d)}`] = name; };
+  // 第n月曜日の日付
+  const nthMon = (m, n) => 1 + ((8 - new Date(y, m - 1, 1).getDay()) % 7) + (n - 1) * 7;
+  const k = y - 1980, adj = 0.242194 * k - Math.floor(k / 4);
+
+  put(1, 1, '元日');
+  put(1, nthMon(1, 2), '成人の日');
+  put(2, 11, '建国記念の日');
+  if (y >= 2020) put(2, 23, '天皇誕生日');
+  put(3, Math.floor(20.8431 + adj), '春分の日');
+  put(4, 29, '昭和の日');
+  put(5, 3, '憲法記念日');
+  put(5, 4, 'みどりの日');
+  put(5, 5, 'こどもの日');
+  if (y === 2020) { put(7, 23, '海の日'); put(7, 24, 'スポーツの日'); put(8, 10, '山の日'); }
+  else if (y === 2021) { put(7, 22, '海の日'); put(7, 23, 'スポーツの日'); put(8, 8, '山の日'); }
+  else {
+    put(7, nthMon(7, 3), '海の日');
+    if (y >= 2016) put(8, 11, '山の日');
+    put(10, nthMon(10, 2), 'スポーツの日');
+  }
+  put(9, nthMon(9, 3), '敬老の日');
+  put(9, Math.floor(23.2488 + adj), '秋分の日');
+  put(11, 3, '文化の日');
+  put(11, 23, '勤労感謝の日');
+
+  // 国民の休日（前日と翌日が祝日に挟まれた平日）
+  for (let d = new Date(y, 0, 2); d.getFullYear() === y && d < new Date(y, 11, 31); d.setDate(d.getDate() + 1)) {
+    const prev = new Date(d); prev.setDate(d.getDate() - 1);
+    const next = new Date(d); next.setDate(d.getDate() + 1);
+    if (!h[ymd(d)] && d.getDay() !== 0 && h[ymd(prev)] && h[ymd(next)]) h[ymd(d)] = '国民の休日';
+  }
+  // 振替休日（日曜の祝日は、次の祝日でない日が休み）
+  for (const ds of Object.keys(h).sort()) {
+    if (parseDate(ds).getDay() !== 0) continue;
+    const d = parseDate(ds);
+    do { d.setDate(d.getDate() + 1); } while (h[ymd(d)]);
+    h[ymd(d)] = '振替休日';
+  }
+  return (holCache[y] = h);
+}
+function holidayName(ds) { return holidaysOf(+ds.slice(0, 4))[ds] || ''; }
+
+/* ---------- 予定（くり返し対応） ---------- */
+function occursOn(e, ds) {
+  if (ds < e.date) return false;
+  const r = e.repeat || 'none';
+  if (r === 'none') return ds === e.date;
+  if (e.until && ds > e.until) return false;
+  if (r === 'daily') return true;
+  if (r === 'weekly') return dayDiff(e.date, ds) % 7 === 0;
+  const a = parseDate(e.date), b = parseDate(ds);
+  if (r === 'monthly') return a.getDate() === b.getDate();
+  if (r === 'yearly') return a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  return false;
+}
+function eventsOn(date) {
+  return events.filter(e => occursOn(e, date)).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+}
+
+/* ---------- 表示 ---------- */
+function visibleDays() {
+  if (mode === 'day') return [parseDate(selected)];
+  if (mode === 'week') {
+    const s = parseDate(selected); s.setDate(s.getDate() - s.getDay());
+    return Array.from({ length: 7 }, (_, i) => { const d = new Date(s); d.setDate(s.getDate() + i); return d; });
+  }
+  const y = view.getFullYear(), m = view.getMonth();
+  const first = new Date(y, m, 1);
+  const weeks = Math.ceil((first.getDay() + new Date(y, m + 1, 0).getDate()) / 7);
+  return Array.from({ length: weeks * 7 }, (_, i) => new Date(y, m, 1 - first.getDay() + i));
+}
+
+function renderTitle(days) {
+  if (mode === 'month') return `${view.getFullYear()}年${view.getMonth() + 1}月`;
+  if (mode === 'day') { const d = days[0]; return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${WD[d.getDay()]}）`; }
+  const a = days[0], b = days[6];
+  return a.getMonth() === b.getMonth()
+    ? `${a.getFullYear()}年${a.getMonth() + 1}月${a.getDate()}日〜${b.getDate()}日`
+    : `${a.getFullYear()}年${a.getMonth() + 1}月${a.getDate()}日〜${b.getMonth() + 1}月${b.getDate()}日`;
+}
+
+function chipHtml(e, withTime) {
+  const t = withTime && !e.allDay && e.start ? esc(e.start) + ' ' : '';
+  const r = e.repeat && e.repeat !== 'none' ? '↻ ' : '';
+  return `<div class="chip" style="background:${e.color}">${t}${r}${esc(e.title)}</div>`;
 }
 
 function render() {
-  const y = view.getFullYear(), m = view.getMonth();
-  $('title').textContent = `${y}年${m + 1}月`;
-  const first = new Date(y, m, 1);
-  const startDay = new Date(y, m, 1 - first.getDay());
-  const weeks = Math.ceil((first.getDay() + new Date(y, m + 1, 0).getDate()) / 7);
+  const days = visibleDays();
+  const m = view.getMonth();
   const todayStr = ymd(new Date());
+  document.body.dataset.mode = mode;
+  $('title').textContent = renderTitle(days);
+  $('dow').classList.toggle('hidden', mode === 'day');
+  for (const b of $('seg').children) b.classList.toggle('on', b.dataset.v === mode);
 
   const grid = $('grid');
+  grid.className = 'grid ' + mode;
   grid.innerHTML = '';
-  for (let i = 0; i < weeks * 7; i++) {
-    const d = new Date(startDay); d.setDate(startDay.getDate() + i);
+  for (const d of days) {
     const ds = ymd(d);
+    const hol = holidayName(ds);
     const cell = document.createElement('div');
     cell.className = 'cell';
-    if (d.getMonth() !== m) cell.classList.add('other');
+    if (mode === 'month' && d.getMonth() !== m) cell.classList.add('other');
     if (d.getDay() === 0) cell.classList.add('sun');
     if (d.getDay() === 6) cell.classList.add('sat');
+    if (hol) cell.classList.add('holiday');
     if (ds === todayStr) cell.classList.add('today');
-    if (ds === selected) cell.classList.add('selected');
+    if (ds === selected && mode !== 'day') cell.classList.add('selected');
 
     const list = eventsOn(ds);
-    const shown = list.slice(0, 3);
-    cell.innerHTML = `<span class="num">${d.getDate()}</span>` +
-      shown.map(e => `<div class="chip" style="background:${e.color}">${e.allDay ? '' : esc(e.start || '') + ' '}${esc(e.title)}</div>`).join('') +
-      (list.length > 3 ? `<div class="more">他${list.length - 3}件</div>` : '');
-    cell.onclick = () => { selected = ds; render(); };
+    let html = `<span class="num">${d.getDate()}</span>`;
+    if (mode === 'week') html += `<span class="wd">${WD[d.getDay()]}</span>`;
+    if (hol) html += `<span class="hol">${esc(hol)}</span>`;
+
+    if (mode === 'month') {
+      html += list.slice(0, 3).map(e => chipHtml(e, true)).join('') +
+        (list.length > 3 ? `<div class="more">他${list.length - 3}件</div>` : '');
+    } else if (mode === 'week') {
+      html += list.map(e => chipHtml(e, true)).join('');
+    } else {
+      html += list.length ? list.map(e => `
+        <div class="drow" data-id="${e.id}">
+          <div class="bar" style="background:${e.color}"></div>
+          <div class="tm">${esc(timeLabel(e))}</div>
+          <div><div class="tt">${esc(e.title)}</div>${e.memo ? `<div class="mm">${esc(e.memo)}</div>` : ''}</div>
+        </div>`).join('') : '<div class="empty">予定はありません</div>';
+    }
+    cell.innerHTML = html;
+    cell.onclick = ev => {
+      const row = ev.target.closest('.drow');
+      if (row) return openForm(row.dataset.id);
+      selected = ds; render();
+    };
     cell.ondblclick = () => openForm(null, ds);
     grid.appendChild(cell);
   }
@@ -225,26 +392,83 @@ function render() {
 }
 
 function renderDay() {
-  const d = new Date(selected + 'T00:00');
-  const w = '日月火水木金土'[d.getDay()];
-  $('dayTitle').textContent = `${d.getMonth() + 1}月${d.getDate()}日（${w}）`;
+  const q = $('q').value.trim().toLowerCase();
+  $('addDay').classList.toggle('hidden', !!q);
+  if (q) return renderSearch(q);
+
+  const d = parseDate(selected);
+  const hol = holidayName(selected);
+  $('dayTitle').innerHTML = `${d.getMonth() + 1}月${d.getDate()}日（${WD[d.getDay()]}）` +
+    (hol ? ` <span class="holtag">${esc(hol)}</span>` : '');
   const list = eventsOn(selected);
   $('dayList').innerHTML = list.length ? '' : '<div class="empty">予定はありません</div>';
-  for (const e of list) {
-    const el = document.createElement('div');
-    el.className = 'item';
-    el.innerHTML = `<div class="bar" style="background:${e.color}"></div>
-      <div><div class="t">${esc(e.title)}</div><div class="s">${esc(timeLabel(e))}${e.memo ? '\n' + esc(e.memo) : ''}</div></div>`;
-    el.onclick = () => openForm(e.id);
-    $('dayList').appendChild(el);
+  for (const e of list) $('dayList').appendChild(itemEl(e, timeLabel(e)));
+}
+
+function itemEl(e, sub, onclick) {
+  const el = document.createElement('div');
+  el.className = 'item';
+  el.innerHTML = `<div class="bar" style="background:${e.color}"></div>
+    <div><div class="t">${esc(e.title)}</div><div class="s">${esc(sub)}${e.memo ? '\n' + esc(e.memo) : ''}</div></div>`;
+  el.onclick = onclick || (() => openForm(e.id));
+  return el;
+}
+
+function renderSearch(q) {
+  const hits = events
+    .filter(e => `${e.title} ${e.memo || ''}`.toLowerCase().includes(q))
+    .sort((a, b) => a.date.localeCompare(b.date) || sortKey(a).localeCompare(sortKey(b)));
+  $('dayTitle').textContent = `検索結果（${hits.length}件）`;
+  $('dayList').innerHTML = hits.length ? '' : '<div class="empty">見つかりませんでした</div>';
+  for (const e of hits) {
+    const d = parseDate(e.date);
+    const rep = e.repeat && e.repeat !== 'none' ? `（${REPEAT_LABEL[e.repeat]}）` : '';
+    const label = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}（${WD[d.getDay()]}） ${timeLabel(e)}${rep}`;
+    $('dayList').appendChild(itemEl(e, label, () => {
+      $('q').value = '';
+      jumpTo(e.date);
+    }));
   }
 }
 
+function jumpTo(ds) {
+  selected = ds;
+  const d = parseDate(ds); view = new Date(d.getFullYear(), d.getMonth(), 1);
+  render();
+}
+
+function shift(dir) {
+  if (mode === 'month') {
+    view = new Date(view.getFullYear(), view.getMonth() + dir, 1);
+  } else {
+    const d = parseDate(selected); d.setDate(d.getDate() + dir * (mode === 'week' ? 7 : 1));
+    selected = ymd(d); view = new Date(d.getFullYear(), d.getMonth(), 1);
+  }
+  render();
+}
+function setMode(v) {
+  mode = v;
+  try { localStorage.setItem(MODE_KEY, v); } catch {}
+  const d = parseDate(selected); view = new Date(d.getFullYear(), d.getMonth(), 1);
+  render();
+}
+
+/* ---------- 入力フォーム ---------- */
 $('colors').innerHTML = COLORS.map((c, i) =>
   `<label><input type="radio" name="color" value="${c}"${i === 0 ? ' checked' : ''}><span style="background:${c}"></span></label>`).join('');
 
-function syncTime() { $('timeRow').classList.toggle('hidden', form.allDay.checked); }
-form.allDay.onchange = syncTime;
+function syncForm() {
+  $('timeRow').classList.toggle('hidden', form.allDay.checked);
+  $('untilWrap').classList.toggle('hidden', form.repeat.value === 'none');
+}
+form.allDay.onchange = syncForm;
+form.repeat.onchange = syncForm;
+
+function remindHintText() {
+  if (!('Notification' in window)) return 'この端末では通知が使えないため、アプリを開いている間だけ画面上でお知らせします。';
+  if (Notification.permission === 'denied') return '通知がブロックされています。ブラウザの設定で許可すると通知が届きます。（今は画面上のお知らせのみ）';
+  return '通知は、アプリを開いている間（バックグラウンド含む）に届きます。アプリを完全に閉じていると届きません。終日の予定は朝9:00が基準です。';
+}
 
 function openForm(id, date) {
   editingId = id;
@@ -256,32 +480,45 @@ function openForm(id, date) {
   form.allDay.checked = e ? e.allDay : false;
   form.start.value = e ? (e.start || '') : '';
   form.end.value = e ? (e.end || '') : '';
+  form.repeat.value = e ? (e.repeat || 'none') : 'none';
+  form.until.value = e ? (e.until || '') : '';
+  form.remind.value = e && e.remind != null ? String(e.remind) : '';
   form.memo.value = e ? (e.memo || '') : '';
   form.color.value = e ? e.color : COLORS[0];
-  syncTime();
+  $('repeatHint').classList.toggle('hidden', !(e && e.repeat && e.repeat !== 'none'));
+  $('remindHint').textContent = remindHintText();
+  syncForm();
   $('dlg').showModal();
   form.title.focus();
 }
 
 form.onsubmit = ev => {
   ev.preventDefault();
+  const rep = form.repeat.value;
   const data = {
     title: form.title.value.trim(),
     date: form.date.value,
     allDay: form.allDay.checked,
     start: form.allDay.checked ? '' : form.start.value,
     end: form.allDay.checked ? '' : form.end.value,
+    repeat: rep,
+    until: rep === 'none' ? '' : form.until.value,
+    remind: form.remind.value,
     memo: form.memo.value.trim(),
     color: form.color.value,
   };
   if (!data.title || !data.date) return;
-  if (editingId) Object.assign(events.find(x => x.id === editingId), data);
-  else events.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ...data });
+  if (data.until && data.until < data.date) { alert('「いつまで」は開始日以降にしてください'); return; }
+  let ev2;
+  if (editingId) { ev2 = events.find(x => x.id === editingId); Object.assign(ev2, data); }
+  else { ev2 = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ...data }; events.push(ev2); }
   save();
-  selected = data.date;
-  const d = new Date(data.date + 'T00:00'); view = new Date(d.getFullYear(), d.getMonth(), 1);
+  if (data.remind !== '') {
+    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+    markPastReminders(ev2); // 保存した時点ですでに過ぎている通知は鳴らさない
+  }
+  jumpTo(data.date);
   $('dlg').close();
-  render();
 };
 $('del').onclick = () => {
   if (!confirm('この予定を削除しますか？')) return;
@@ -290,12 +527,15 @@ $('del').onclick = () => {
 };
 $('cancel').onclick = () => $('dlg').close();
 
-$('prev').onclick = () => { view.setMonth(view.getMonth() - 1); render(); };
-$('next').onclick = () => { view.setMonth(view.getMonth() + 1); render(); };
+$('prev').onclick = () => shift(-1);
+$('next').onclick = () => shift(1);
 $('today').onclick = () => { const t = new Date(); view = new Date(t.getFullYear(), t.getMonth(), 1); selected = ymd(t); render(); };
 $('add').onclick = () => openForm(null);
 $('addDay').onclick = () => openForm(null, selected);
+$('seg').onclick = ev => { const b = ev.target.closest('button'); if (b) setMode(b.dataset.v); };
+$('q').oninput = renderDay;
 
+/* ---------- 書き出し / 読み込み ---------- */
 $('export').onclick = () => {
   const blob = new Blob([JSON.stringify(events, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -317,14 +557,78 @@ $('importFile').onchange = async () => {
   $('importFile').value = '';
 };
 
+/* ---------- 通知・リマインダー ---------- */
+function loadFired() {
+  try { return JSON.parse(localStorage.getItem(FIRED_KEY)) || {}; } catch { return {}; }
+}
+function saveFired(f) {
+  const cutoff = Date.now() - 3 * 864e5;
+  for (const k of Object.keys(f)) if (f[k] < cutoff) delete f[k];
+  try { localStorage.setItem(FIRED_KEY, JSON.stringify(f)); } catch {}
+}
+// 前日〜2日後の範囲で、この予定の通知時刻を列挙する
+function reminderTimes(e) {
+  if (e.remind == null || e.remind === '') return [];
+  const out = [];
+  const base = new Date(); base.setHours(0, 0, 0, 0);
+  for (let i = -1; i <= 2; i++) {
+    const d = new Date(base); d.setDate(base.getDate() + i);
+    const ds = ymd(d);
+    if (!occursOn(e, ds)) continue;
+    const at = new Date(`${ds}T${e.allDay || !e.start ? '09:00' : e.start}`).getTime();
+    out.push({ key: `${e.id}|${ds}|${e.remind}`, t: at - Number(e.remind) * 60000, ds });
+  }
+  return out;
+}
+function markPastReminders(e) {
+  const fired = loadFired(), now = Date.now();
+  for (const r of reminderTimes(e)) if (r.t <= now) fired[r.key] = now;
+  saveFired(fired);
+}
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  t.onclick = () => t.remove();
+  $('toasts').appendChild(t);
+  setTimeout(() => t.remove(), 15000);
+}
+async function notify(title, body, tag) {
+  toast(`🔔 ${title}\n${body}`);
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+    if (reg) await reg.showNotification(title, { body, tag, icon: 'icon-192.png' });
+    else new Notification(title, { body, tag, icon: 'icon-192.png' });
+  } catch {}
+}
+function checkReminders() {
+  const fired = loadFired(), now = Date.now();
+  let changed = false;
+  for (const e of events) {
+    for (const r of reminderTimes(e)) {
+      // 通知時刻を過ぎて2時間以内で、まだ鳴らしていないものだけ
+      if (now >= r.t && now - r.t < 120 * 60000 && !fired[r.key]) {
+        fired[r.key] = now; changed = true;
+        const d = parseDate(r.ds);
+        const when = `${d.getMonth() + 1}/${d.getDate()}（${WD[d.getDay()]}） ${timeLabel(e)}`;
+        notify(e.title, e.memo ? `${when}\n${e.memo}` : when, r.key);
+      }
+    }
+  }
+  if (changed) saveFired(fired);
+}
+setInterval(checkReminders, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkReminders(); } });
+
 document.addEventListener('keydown', e => {
-  if ($('dlg').open || e.target.matches('input, textarea')) return;
+  if ($('dlg').open || e.target.matches('input, textarea, select')) return;
   if (e.key === 'ArrowLeft') $('prev').click();
   if (e.key === 'ArrowRight') $('next').click();
   if (e.key === 'n') $('add').click();
 });
 
 render();
+checkReminders();
 
 // オフライン対応（https か localhost で開いたときだけ有効）
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {

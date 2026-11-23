@@ -1,5 +1,5 @@
 // アプリのファイルを端末にキャッシュして、通信がなくても開けるようにする
-const CACHE = 'my-calendar-v1';
+const CACHE = 'my-calendar-v2';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -26,4 +26,13 @@ self.addEventListener('fetch', e => {
       return cached || fresh;
     })
   );
+});
+
+// 通知をタップしたらアプリを前面に出す
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    for (const c of list) if ('focus' in c) return c.focus();
+    return self.clients.openWindow('./');
+  }));
 });
