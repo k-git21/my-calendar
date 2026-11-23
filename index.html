@@ -174,8 +174,8 @@
     <label>日付<input name="date" type="date" required></label>
     <label class="check"><input name="allDay" type="checkbox"> 終日</label>
     <div class="row" id="timeRow">
-      <label>開始<input name="start" type="time"></label>
-      <label>終了<input name="end" type="time"></label>
+      <label>開始<select name="start"></select></label>
+      <label>終了<select name="end"></select></label>
     </div>
     <div class="row">
       <label>くり返し
@@ -457,6 +457,23 @@ function setMode(v) {
 $('colors').innerHTML = COLORS.map((c, i) =>
   `<label><input type="radio" name="color" value="${c}"${i === 0 ? ' checked' : ''}><span style="background:${c}"></span></label>`).join('');
 
+// 時刻は10分刻みで選ぶ
+const TIME_OPTIONS = '<option value="">--:--</option>' + Array.from({ length: 144 }, (_, i) => {
+  const t = `${pad(Math.floor(i / 6))}:${pad((i % 6) * 10)}`;
+  return `<option value="${t}">${t}</option>`;
+}).join('');
+form.start.innerHTML = TIME_OPTIONS;
+form.end.innerHTML = TIME_OPTIONS;
+function setTime(sel, v) {
+  // 以前に1分単位で入れた時刻も、そのまま選べるように足しておく
+  if (v && ![...sel.options].some(o => o.value === v)) {
+    const opt = new Option(v, v);
+    const after = [...sel.options].find(o => o.value > v);
+    sel.add(opt, after || null);
+  }
+  sel.value = v || '';
+}
+
 function syncForm() {
   $('timeRow').classList.toggle('hidden', form.allDay.checked);
   $('untilWrap').classList.toggle('hidden', form.repeat.value === 'none');
@@ -478,8 +495,8 @@ function openForm(id, date) {
   form.title.value = e ? e.title : '';
   form.date.value = e ? e.date : (date || selected);
   form.allDay.checked = e ? e.allDay : false;
-  form.start.value = e ? (e.start || '') : '';
-  form.end.value = e ? (e.end || '') : '';
+  setTime(form.start, e ? e.start : '');
+  setTime(form.end, e ? e.end : '');
   form.repeat.value = e ? (e.repeat || 'none') : 'none';
   form.until.value = e ? (e.until || '') : '';
   form.remind.value = e && e.remind != null ? String(e.remind) : '';
