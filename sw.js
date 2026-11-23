@@ -1,5 +1,5 @@
 // アプリのファイルを端末にキャッシュして、通信がなくても開けるようにする
-const CACHE = 'my-calendar-v2';
+const CACHE = 'my-calendar-v3';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
